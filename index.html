@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escudo Medieval PBR</title>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+<style>
+  :root { --bg:#14110f; --panel:#201b17; --ink:#efe6d8; --muted:#a89a85; --accent:#c8873a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:radial-gradient(circle at 50% 30%, #2b241e, var(--bg)); color:var(--ink);
+         font-family: Georgia, "Times New Roman", serif; min-height:100vh; display:flex; flex-direction:column; }
+  header { padding:20px 16px 4px; text-align:center; }
+  h1 { margin:0; font-size:clamp(1.5rem,4vw,2.4rem); letter-spacing:.05em; }
+  header p { margin:6px 0 0; color:var(--muted); }
+  model-viewer { width:100%; flex:1; min-height:55vh; --poster-color:transparent; }
+  .panel { display:flex; flex-wrap:wrap; gap:16px; justify-content:center; padding:16px;
+           background:var(--panel); border-top:1px solid #3a3027; }
+  .group { min-width:220px; flex:1 1 220px; max-width:360px; }
+  .group h2 { margin:0 0 8px; font-size:.95rem; color:var(--accent); text-transform:uppercase; letter-spacing:.08em; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; }
+  button { font:inherit; color:var(--ink); background:#2e2720; border:1px solid #54463a; border-radius:6px;
+           padding:8px 12px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+  button:hover { border-color:var(--accent); }
+  button[aria-pressed="true"] { background:var(--accent); color:#1b1410; border-color:var(--accent); }
+  .sw { width:14px; height:14px; border-radius:50%; border:1px solid #0006; }
+  footer { text-align:center; color:var(--muted); font-size:.8rem; padding:8px 16px 14px; background:var(--panel); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Escudo Medieval</h1>
+  <p>Acero · Bronce · Pintura heráldica — PBR 1K, ~1 000 caras</p>
+</header>
+
+<model-viewer id="mv" src="assets/escudo.glb" alt="Escudo medieval con cruz de acero, protector central de bronce y remaches"
+  camera-controls auto-rotate auto-rotate-delay="3000" shadow-intensity="1.2" shadow-softness="0.8"
+  exposure="1.1" environment-image="neutral" camera-orbit="25deg 80deg auto" interaction-prompt="auto">
+</model-viewer>
+
+<section class="panel">
+  <div class="group">
+    <h2>1 · Color de la pintura</h2>
+    <div class="row" id="paint">
+      <button data-c="0.55,0.07,0.07" aria-pressed="true"><span class="sw" style="background:#8c1212"></span>Rojo</button>
+      <button data-c="0.08,0.16,0.50"><span class="sw" style="background:#142980"></span>Azul</button>
+      <button data-c="0.07,0.33,0.14"><span class="sw" style="background:#125424"></span>Verde</button>
+      <button data-c="0.9,0.9,0.85"><span class="sw" style="background:#e6e6d9"></span>Blanco</button>
+    </div>
+  </div>
+  <div class="group">
+    <h2>2 · Acabado del acero</h2>
+    <div class="row" id="steel">
+      <button data-c="1,1,1" data-r="1" aria-pressed="true"><span class="sw" style="background:#9a9ea3"></span>Acero</button>
+      <button data-c="0.25,0.25,0.3" data-r="1.4"><span class="sw" style="background:#3f3f4c"></span>Ennegrecido</button>
+      <button data-c="1.5,1.1,0.4" data-r="0.8"><span class="sw" style="background:#d4a54a"></span>Dorado</button>
+      <button data-c="0.6,0.8,1.6" data-r="0.7"><span class="sw" style="background:#8fb4ff"></span>Frío</button>
+    </div>
+  </div>
+  <div class="group">
+    <h2>3 · Normal map del bronce</h2>
+    <div class="row">
+      <button id="nrm" aria-pressed="true">Normal map: ACTIVADO</button>
+    </div>
+  </div>
+</section>
+<footer>Modelo y texturas creados en Blender + Substance 3D Painter · Visor: Google model-viewer</footer>
+
+<script type="module">
+const mv = document.getElementById('mv');
+let mats = {}, base = {}, normals = {};
+const group = (id, fn) => {
+  const row = document.getElementById(id);
+  row.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b || !mats.Acero) return;
+    row.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    fn(b);
+  });
+};
+mv.addEventListener('load', () => {
+  mv.model.materials.forEach(m => { mats[m.name] = m; });
+  normals.Bronce = mats.Bronce.normalTexture.texture;
+  normals.Remaches = mats.Remaches.normalTexture.texture;
+  mats.Acero.pbrMetallicRoughness.setBaseColorFactor([1,1,1,1]);
+  mats.Escudo_Pintura.pbrMetallicRoughness.setBaseColorFactor([.55,.07,.07,1]);
+  base.rough = mats.Acero.pbrMetallicRoughness.roughnessFactor;
+});
+
+group('paint', b => {
+  const [r,g,bl] = b.dataset.c.split(',').map(Number);
+  mats.Escudo_Pintura.pbrMetallicRoughness.setBaseColorFactor([r,g,bl,1]);
+});
+group('steel', b => {
+  const [r,g,bl] = b.dataset.c.split(',').map(Number);
+  const f = [r,g,bl,1], rough = Number(b.dataset.r);
+  for (const n of ['Acero','Remaches']) {
+    mats[n].pbrMetallicRoughness.setBaseColorFactor(f);
+    mats[n].pbrMetallicRoughness.setRoughnessFactor(Math.min(1, rough));
+  }
+});
+const nrm = document.getElementById('nrm');
+nrm.addEventListener('click', () => {
+  if (!mats.Bronce) return;
+  const on = nrm.getAttribute('aria-pressed') !== 'true';
+  nrm.setAttribute('aria-pressed', on);
+  nrm.textContent = 'Normal map: ' + (on ? 'ACTIVADO' : 'DESACTIVADO');
+  for (const n of ['Bronce']) mats[n].normalTexture.setTexture(on ? normals[n] : null);
+});
+</script>
+</body>
+</html>
